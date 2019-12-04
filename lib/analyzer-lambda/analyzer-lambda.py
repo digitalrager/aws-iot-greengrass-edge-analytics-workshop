@@ -78,11 +78,27 @@ def handler(event, context):
 
     # ----------------------------------------------------------
 
-    # Code exercise for rolling statistical calculation...
+    # Code exercise for rolling statistical calculation..
+
+    # Code exercise for filling missing metrics...
     # --------------Enter code below this line--------------
+    timeline_df = get_source_dataframe(end_time, '1S')
+    raw_df = pd.concat([timeline_df, raw_df], axis=1)
+    raw_df.fillna(method='ffill', inplace=True)
+    raw_df = raw_df.fillna(method='backfill')
+    raw_df = raw_df.resample('{0}S'.format(min_resolution_seconds), loffset=calculated_offset).mean()
 
     # ----------------------------------------------------------
 
+    # Code exercise for rolling statistical calculation...
+    # --------------Enter code below this line--------------
+    mean_df = raw_df.rolling(min_resolution_seconds, min_periods=1).mean()
+    std_df = raw_df.rolling(min_resolution_seconds, min_periods=1).std()
+    mean_df.columns = [str(col) + '_mean' for col in mean_df.columns]
+    std_df.columns = [str(col) + '_std' for col in std_df.columns]
+    raw_df = pd.concat([raw_df, mean_df, std_df], axis=1)
+
+    # ----------------------------------------------------------
     topic = 'metrics/filled/{}'.format(deviceId)
     message = json.loads(raw_df.to_json(orient='columns'))
     callDownstreamLambda(topic, message)
